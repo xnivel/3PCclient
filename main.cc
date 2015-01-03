@@ -44,6 +44,7 @@ void *timerfunction1(void *i){
 		pthread_mutex_unlock(&mutex1);
 		return NULL;
 	}
+  printf("TIMEOUT - ABORTED\n");
 	state=STATEFREE;
 	pthread_mutex_unlock(&mutex1);
 }
@@ -57,7 +58,7 @@ void *timerfunction2(void *i){
 		return NULL;
 	}
 	state=STATEFREE;
-	printf("DOCOMMIT\n");
+	printf("TIMEOUT - DOCOMMIT\n");
 
 	pthread_mutex_unlock(&mutex1);
 }
@@ -72,7 +73,7 @@ void *sendWantCommit(void*){
 void wantCommit()
 {
 	if(rand()%100<chanceOfWantCommit){
-		printf("a\n");
+		printf("send wantCommit\n");
 		pthread_create(&thread,NULL,sendWantCommit,NULL);
 		return;
 	}
@@ -94,7 +95,7 @@ void recivCANCOMMIT(int msg)
 		tmp=MSGNO;
 	}
 	//pthread_mutex_unlock(&mutex1);
-	printf("send %d",tmp);
+	printf("send %d\n",tmp);
 	//pthread_mutex_lock(&mutex1);
 	zmq_send (requester_Client, &tmp, sizeof(tmp), ZMQ_NOBLOCK);
 //	state=STATEWAITING;
@@ -113,7 +114,7 @@ void recivPRECOMMIT(int msg)
 
 	int tmp=MSGACK;
 	state=msg;
-	printf("send %d",tmp);
+	printf("send %d\n",tmp);
 	zmq_send (requester_Client, &tmp, sizeof(tmp), ZMQ_NOBLOCK);
 	state=STATEPREPARED;
 	int *arg =(int*)malloc(sizeof(*arg));
@@ -138,10 +139,10 @@ void recivDOCOMMIT()
 void controlUnit(int msg)
 {
 	switch(msg){
-		case MSGCANCOMMIT: { recivCANCOMMIT(msg); break;}
-		case MSGPRECOMMIT: { recivPRECOMMIT(msg); break;}
-		case MSGDOCOMMIT: { recivDOCOMMIT(); break;}
-		case MSGABORT: { pthread_mutex_lock(&mutex1);state=STATEFREE;pthread_mutex_unlock(&mutex1); break;}
+		case MSGCANCOMMIT: { printf("RECIV CANCOMMIT\n");recivCANCOMMIT(msg); break;}
+		case MSGPRECOMMIT: { printf("RECIV PRECOMMIT\n");recivPRECOMMIT(msg); break;}
+		case MSGDOCOMMIT: { printf("RECIV DOCOMMIT\n");recivDOCOMMIT(); break;}
+		case MSGABORT: { printf("RECIV ABORT\n");pthread_mutex_lock(&mutex1);state=STATEFREE;pthread_mutex_unlock(&mutex1); break;}
 	}
 };
 
@@ -158,9 +159,9 @@ int main (int argc, char* argv[])
 		wantCommit();
 	while(true){
 		msg=(int*)malloc(sizeof(int));
-		printf("asd\n");
+		// printf("asd\n");
 		zmq_recv (responder_Server, msg, sizeof(int), 0);
-		printf("asd\n");
+		// printf("asd\n");
 		int tmp=*msg;
 		printf("dostalem wiadomosc %d\n",tmp);
 		controlUnit(tmp);
