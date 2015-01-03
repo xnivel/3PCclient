@@ -24,7 +24,7 @@
 
 int m=0,state=STATEFREE;
 int *msg;
-int rank, size, chanceOfWantCommit=100;
+int rank, size, chanceOfWantCommit=25;
 void *context_Server = zmq_ctx_new ();
 void *responder_Server = zmq_socket (context_Server, ZMQ_PULL);
 int rc_Server = zmq_bind (responder_Server, "tcp://192.168.2.1:5555");
@@ -65,19 +65,22 @@ void *timerfunction2(void *i){
 
 void *sendWantCommit(void*){
 	int tmp=MSGCANCOMMIT;
-	usleep(10000);
-	pthread_mutex_lock(&mutex1);
-	zmq_send (requester_Client, &tmp, sizeof(tmp), ZMQ_NOBLOCK);
-	pthread_mutex_unlock(&mutex1);
+  while(true){
+    int t=200000*((int)rand()%10);
+    // printf("czas %d\n",t);
+  	usleep(t);
+    // printf("-------------------------timer\n");
+    if(rand()%100<chanceOfWantCommit){
+  	pthread_mutex_lock(&mutex1);
+    printf("send wantCommit\n");
+  	zmq_send (requester_Client, &tmp, sizeof(tmp), ZMQ_NOBLOCK);
+  	pthread_mutex_unlock(&mutex1);
+    }
+  }
 };
 void wantCommit()
 {
-	if(rand()%100<chanceOfWantCommit){
-		printf("send wantCommit\n");
 		pthread_create(&thread,NULL,sendWantCommit,NULL);
-		return;
-	}
-
 };
 
 void recivCANCOMMIT(int msg)
@@ -150,7 +153,7 @@ int main (int argc, char* argv[])
 {
 	int tmpwiad[1];
 	zmq_connect (requester_Client, "tcp://192.168.2.2:5555");
-	int seed=time(NULL);
+	int seed=time(NULL)+5*11311*time(NULL);
 	srand(seed);
 	printf( "Hello world from process \n" );
 
