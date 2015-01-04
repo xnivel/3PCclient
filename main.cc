@@ -24,7 +24,7 @@
 
 int m=0,state=STATEFREE;
 int *msg;
-int rank, size, chanceOfWantCommit=25;
+int rank, size, chanceOfWantCommit=25,chanceOfNo=25,changeOfError=15;
 void *context_Server = zmq_ctx_new ();
 void *responder_Server = zmq_socket (context_Server, ZMQ_PULL);
 int rc_Server = zmq_bind (responder_Server, "tcp://192.168.2.1:5555");
@@ -82,7 +82,11 @@ void wantCommit()
 {
 		pthread_create(&thread,NULL,sendWantCommit,NULL);
 };
-
+void abort(){
+  // pthread_mutex_lock(&mutex1);
+  state=STATEFREE;
+  // pthread_mutex_unlock(&mutex1);
+};
 void recivCANCOMMIT(int msg)
 {
 	int tmp=0;
@@ -97,6 +101,11 @@ void recivCANCOMMIT(int msg)
 	}else{
 		tmp=MSGNO;
 	}
+  if(rand()%100<20)
+    {
+      tmp=MSGNO;
+      abort();
+    }
 	//pthread_mutex_unlock(&mutex1);
 	printf("send %d\n",tmp);
 	//pthread_mutex_lock(&mutex1);
@@ -142,10 +151,42 @@ void recivDOCOMMIT()
 void controlUnit(int msg)
 {
 	switch(msg){
-		case MSGCANCOMMIT: { printf("RECIV CANCOMMIT\n");recivCANCOMMIT(msg); break;}
-		case MSGPRECOMMIT: { printf("RECIV PRECOMMIT\n");recivPRECOMMIT(msg); break;}
-		case MSGDOCOMMIT: { printf("RECIV DOCOMMIT\n");recivDOCOMMIT(); break;}
-		case MSGABORT: { printf("RECIV ABORT\n");pthread_mutex_lock(&mutex1);state=STATEFREE;pthread_mutex_unlock(&mutex1); break;}
+		case MSGCANCOMMIT: {
+      if(rand()%100<changeOfError){
+        printf("RECIV CANCOMMIT - ERROR\n");
+        pthread_mutex_lock(&mutex1);
+        state=STATEFREE;
+        pthread_mutex_unlock(&mutex1);
+      }else{
+        printf("RECIV CANCOMMIT\n");
+        recivCANCOMMIT(msg);
+      }
+      break;
+      }
+		case MSGPRECOMMIT: {
+      if(rand()%100<changeOfError){
+        printf("RECIV PRECOMMIT - ERROR\n");
+        pthread_mutex_lock(&mutex1);
+        state=STATEFREE;
+        pthread_mutex_unlock(&mutex1);
+      }else{
+        printf("RECIV PRECOMMIT\n");
+        recivPRECOMMIT(msg);
+      }
+      break;
+      }
+		case MSGDOCOMMIT: {
+      printf("RECIV DOCOMMIT\n");
+      recivDOCOMMIT();
+      break;
+      }
+		case MSGABORT: {
+      printf("RECIV ABORT\n");
+      pthread_mutex_lock(&mutex1);
+      state=STATEFREE;
+      pthread_mutex_unlock(&mutex1);
+      break;
+      }
 	}
 };
 
